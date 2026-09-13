@@ -31,8 +31,6 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
-    /* coffee-cart.app marks its elements with `data-test`, not the Playwright default `data-testid`.
-     * This makes `page.getByTestId(id)` look for `data-test="id"` instead. */
     testIdAttribute: 'data-test',
   },
 
