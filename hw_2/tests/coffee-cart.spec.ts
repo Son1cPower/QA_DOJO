@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test } from '../fixtures';
+import { expect, test as testOriginal } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import { random } from 'lodash';
 import { COFFEE_MENU, getRandomCoffee, getRandomCoffees } from './data/coffee-menu';
@@ -10,17 +11,8 @@ test.describe('Home Page', { tag: '@homePage' }, () => {
       tag: ['@smoke', '@regression'],
       annotation: { type: 'TestId', description: 'TC-HOME-01' },
     },
-    async ({ page }) => {
+    async ({ page, cartLink, checkoutButton }) => {
       const coffee = getRandomCoffee();
-      const cartLink = page.getByRole('link', { name: 'Cart page' });
-      const checkoutButton = page.getByTestId('checkout');
-
-      await test.step('Open the app with an empty cart', async () => {
-        await page.goto('https://coffee-cart.app/');
-
-        await expect(cartLink).toHaveText('cart (0)');
-        await expect(checkoutButton).toHaveText('Total: $0.00');
-      });
 
       await test.step(`Add ${coffee.name} to the cart`, async () => {
         await page.getByTestId(coffee.testId).click();
@@ -45,18 +37,9 @@ test.describe('Home Page', { tag: '@homePage' }, () => {
       tag: ['@regression'],
       annotation: { type: 'TestId', description: 'TC-HOME-02' },
     },
-    async ({ page }) => {
+    async ({ page, cartLink, checkoutButton }) => {
       const coffees = getRandomCoffees(random(2, COFFEE_MENU.length));
-      const checkoutButton = page.getByTestId('checkout');
-      const cartLink = page.getByRole('link', { name: 'Cart page' });
       const expectedTotal = coffees.reduce((sum, coffee) => sum + coffee.price, 0);
-
-      await test.step('Open the app with an empty cart', async () => {
-        await page.goto('https://coffee-cart.app/');
-
-        await expect(cartLink).toHaveText('cart (0)');
-        await expect(checkoutButton).toHaveText('Total: $0.00');
-      });
 
       for (const coffee of coffees) {
         await test.step(`Add ${coffee.name} to the cart`, async () => {
@@ -82,17 +65,8 @@ test.describe('Home Page', { tag: '@homePage' }, () => {
       tag: ['@smoke', '@regression'],
       annotation: { type: 'TestId', description: 'TC-HOME-03' },
     },
-    async ({ page }) => {
+    async ({ page, cartLink, checkoutButton }) => {
       const coffee = getRandomCoffee();
-      const cartLink = page.getByRole('link', { name: 'Cart page' });
-      const checkoutButton = page.getByTestId('checkout');
-
-      await test.step('Open the app with an empty cart', async () => {
-        await page.goto('https://coffee-cart.app/');
-
-        await expect(cartLink).toHaveText('cart (0)');
-        await expect(checkoutButton).toHaveText('Total: $0.00');
-      });
 
       await test.step(`Add ${coffee.name} x3 to the cart`, async () => {
         for (let i = 0; i < 3; i++) {
@@ -125,63 +99,53 @@ test.describe('Home Page', { tag: '@homePage' }, () => {
 
 test.describe('Checkout Page', { tag: '@checkout' }, () => {
 
-test('Should complete checkout and show the success message',
-  {
-    tag: ['@smoke', '@regression'],
-    annotation: { type: 'TestId', description: 'TC-CHECKOUT-01' },
-  }, async ({ page }) => {
-    const coffee = getRandomCoffee();
-    const cartLink = page.getByRole('link', { name: 'Cart page' });
-    const checkoutButton = page.getByTestId('checkout');
+  test('Should complete checkout and show the success message',
+    {
+      tag: ['@smoke', '@regression'],
+      annotation: { type: 'TestId', description: 'TC-CHECKOUT-01' },
+    }, async ({ page, cartLink, checkoutButton }) => {
+      const coffee = getRandomCoffee();
 
-    await test.step('Open the app with an empty cart', async () => {
-      await page.goto('https://coffee-cart.app/');
+      await test.step(`Add ${coffee.name} to the cart`, async () => {
+        await page.getByTestId(coffee.testId).click();
+      });
 
-      await expect(cartLink).toHaveText('cart (0)');
-      await expect(checkoutButton).toHaveText('Total: $0.00');
+      await test.step('Verify cart count is updated', async () => {
+        await expect(cartLink).toHaveText('cart (1)');
+      });
+
+      await test.step('Verify total price reflects the added coffee', async () => {
+        const totalText = await checkoutButton.textContent();
+        const totalValue = Number(totalText?.replace(/[^\d.]/g, ''));
+
+        expect(totalValue).toBe(coffee.price);
+      });
+
+      await test.step('Open the checkout form', async () => {
+        await checkoutButton.click();
+      });
+
+      await test.step('Fill in the checkout form', async () => {
+        await page.getByRole('textbox', { name: 'Name' }).fill(faker.person.fullName());
+        await page.getByRole('textbox', { name: 'Email' }).fill(faker.internet.email());
+        await page.getByRole('button', { name: 'Submit' }).click();
+      });
+
+      await test.step('Verify the success message is shown', async () => {
+        await expect(page.locator('#app')).toContainText(
+          'Thanks for your purchase. Please check your email for payment.',
+        );
+      });
+
     });
-
-    await test.step(`Add ${coffee.name} to the cart`, async () => {
-      await page.getByTestId(coffee.testId).click();
-    });
-
-    await test.step('Verify cart count is updated', async () => {
-      await expect(cartLink).toHaveText('cart (1)');
-    });
-
-    await test.step('Verify total price reflects the added coffee', async () => {
-      const totalText = await checkoutButton.textContent();
-      const totalValue = Number(totalText?.replace(/[^\d.]/g, ''));
-
-      expect(totalValue).toBe(coffee.price);
-    });
-
-    await test.step('Open the checkout form', async () => {
-      await checkoutButton.click();
-    });
-
-    await test.step('Fill in the checkout form', async () => {
-      await page.getByRole('textbox', { name: 'Name' }).fill(faker.person.fullName());
-      await page.getByRole('textbox', { name: 'Email' }).fill(faker.internet.email());
-      await page.getByRole('button', { name: 'Submit' }).click();
-    });
-
-    await test.step('Verify the success message is shown', async () => {
-      await expect(page.locator('#app')).toContainText(
-        'Thanks for your purchase. Please check your email for payment.',
-      );
-    });
-
-  });
 });
 
 
 
 
 
-
-test.describe('Cart Page', { tag: '@cart' }, () => {
-  test(
+testOriginal.describe('Cart Page', { tag: '@cart' }, () => {
+  testOriginal(
     'Should list every added coffee with its correct unit and total price',
     {
       tag: ['@smoke', '@regression'],
@@ -189,35 +153,36 @@ test.describe('Cart Page', { tag: '@cart' }, () => {
     },
     async ({ page }) => {
       const coffees = getRandomCoffees(random(2, COFFEE_MENU.length));
+      const expectedTotal = coffees.reduce((sum, coffee) => sum + coffee.price, 0);
       const cartLink = page.getByRole('link', { name: 'Cart page' });
       const checkoutButton = page.getByTestId('checkout');
-      const expectedTotal = coffees.reduce((sum, coffee) => sum + coffee.price, 0);
 
-      await test.step('Open the app with an empty cart', async () => {
+      await testOriginal.step('Open the app with an empty cart', async () => {
         await page.goto('https://coffee-cart.app/');
 
         await expect(cartLink).toHaveText('cart (0)');
+        await expect(checkoutButton).toHaveText('Total: $0.00');
       });
 
       for (const coffee of coffees) {
-        await test.step(`Add ${coffee.name} to the cart`, async () => {
+        await testOriginal.step(`Add ${coffee.name} to the cart`, async () => {
           await page.getByTestId(coffee.testId).click();
         });
       }
 
-         await test.step(`Verify cart count reflects all ${coffees.length} added coffees`, async () => {
+      await testOriginal.step(`Verify cart count reflects all ${coffees.length} added coffees`, async () => {
         await expect(cartLink).toHaveText(`cart (${coffees.length})`);
       });
 
-      await test.step(`Verify total price reflects all ${coffees.length} added coffees`, async () => {
+      await testOriginal.step(`Verify total price reflects all ${coffees.length} added coffees`, async () => {
         await expect(checkoutButton).toHaveText(`Total: $${expectedTotal.toFixed(2)}`);
       });
 
-      await test.step('Open the cart page', async () => {
+      await testOriginal.step('Open the cart page', async () => {
         await cartLink.click();
       });
 
-      await test.step(`Verify the cart page lists all ${coffees.length} added coffees`, async () => {
+      await testOriginal.step(`Verify the cart page lists all ${coffees.length} added coffees`, async () => {
         const cartRows = page
           .getByRole('listitem')
           .filter({ has: page.getByRole('button', { name: /^Remove all/ }) });
@@ -226,7 +191,7 @@ test.describe('Cart Page', { tag: '@cart' }, () => {
       });
 
       for (const coffee of coffees) {
-        await test.step(`Verify ${coffee.name} row shows the correct unit and total price`, async () => {
+        await testOriginal.step(`Verify ${coffee.name} row shows the correct unit and total price`, async () => {
           const itemRow = page
             .getByRole('listitem')
             .filter({
