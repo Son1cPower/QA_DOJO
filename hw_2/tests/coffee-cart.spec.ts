@@ -158,7 +158,7 @@ testOriginal.describe('Cart Page', { tag: '@cart' }, () => {
       const checkoutButton = page.getByTestId('checkout');
 
       await testOriginal.step('Open the app with an empty cart', async () => {
-        await page.goto('https://coffee-cart.app/');
+        await page.goto('/');
 
         await expect(cartLink).toHaveText('cart (0)');
         await expect(checkoutButton).toHaveText('Total: $0.00');
