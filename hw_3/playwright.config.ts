@@ -25,7 +25,7 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: 'http://104.168.59.50/articles',
+    baseURL: process.env.BASE_URL,
     trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
   },
 
